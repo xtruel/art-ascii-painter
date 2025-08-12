@@ -91,7 +91,8 @@ export default {
 				'accordion-up': 'accordion-up 0.2s ease-out'
 			},
 			fontFamily: {
-				pixel: ["VT323", "ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "Liberation Mono", "monospace"]
+				pixel: ["VT323", "ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "Liberation Mono", "monospace"],
+				ascii: ["Press Start 2P", "VT323", "ui-monospace", "Menlo", "Consolas", "monospace"]
 			}
 		}
 	},

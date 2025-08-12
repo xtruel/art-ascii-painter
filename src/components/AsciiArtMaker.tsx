@@ -24,17 +24,17 @@ const colorTokenMap: Record<ColorKey, string> = {
 
 export default function AsciiArtMaker() {
   const [text, setText] = useState("HELLO WORLD");
-  const [cols, setCols] = useState(110);
+  const [cols, setCols] = useState(118);
   const [ramp, setRamp] = useState<keyof typeof RAMPS>((RAMPS as any).symbols ? ("symbols" as keyof typeof RAMPS) : "detailed");
   const [invert, setInvert] = useState(true);
-  const [aspect, setAspect] = useState(2.0);
-  const [randomMode, setRandomMode] = useState(true);
+  const [aspect, setAspect] = useState(1.6);
+  const [randomMode, setRandomMode] = useState(false);
   const [color, setColor] = useState<ColorKey>("white");
   const [ascii, setAscii] = useState<string>("");
   const [mode, setMode] = useState<"text" | "image">("image");
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
-  const [previewSize, setPreviewSize] = useState(9);
+  const [previewSize, setPreviewSize] = useState(13);
 
   const randomizeControls = () => {
     const keys = Object.keys(RAMPS) as Array<keyof typeof RAMPS>;
@@ -261,7 +261,7 @@ export default function AsciiArtMaker() {
             }}
           >
             <pre
-              className="font-pixel max-h-[45vh] whitespace-pre px-2 py-2"
+              className="font-ascii max-h-[45vh] whitespace-pre px-2 py-2"
               style={{ color: textColor, fontSize: `${previewSize}px`, lineHeight: 0.8 }}
               aria-label="ASCII preview"
             >
