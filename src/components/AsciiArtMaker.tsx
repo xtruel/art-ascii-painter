@@ -115,30 +115,45 @@ export default function AsciiArtMaker() {
   const textColor = `hsl(var(${colorTokenMap[color]}))`;
 
   return (
-    <section aria-labelledby="maker-title" className="space-y-4">
+    <section aria-labelledby="maker-title" className="space-y-4 mx-auto max-w-3xl">
       <Card className="border-border/60 bg-card/70 backdrop-blur supports-[backdrop-filter]:bg-card/60 shadow-[var(--shadow-elegant,0_10px_30px_-10px_hsl(var(--primary)/0.2))]">
         <CardHeader>
-          <CardTitle id="maker-title" className="text-base">Generate ASCII</CardTitle>
+          <CardTitle id="maker-title" className="text-base">AI ASCII Art Generator</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid md:grid-cols-12 gap-3">
             <div className="md:col-span-6 space-y-2">
               {mode === "text" && (
                 <>
-                  <Label htmlFor="prompt">Text prompt</Label>
-                  <Input
-                    id="prompt"
-                    placeholder="Type something…"
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    className="h-9 text-sm"
-                  />
+                  <Label htmlFor="prompt">Enter your prompt here…</Label>
+                  <div className="relative">
+                    <Input
+                      id="prompt"
+                      placeholder="Enter your prompt…"
+                      value={text}
+                      onChange={(e) => setText(e.target.value)}
+                      className="h-9 text-sm pr-24"
+                    />
+                    <Button
+                      size="sm"
+                      className="absolute right-1 top-1"
+                      onClick={onGenerate}
+                      disabled={loading}
+                    >
+                      {loading ? "Generating…" : "Generate"}
+                    </Button>
+                  </div>
                 </>
               )}
               {mode === "image" && (
                 <div className="space-y-2">
                   <Label htmlFor="image">Image</Label>
-                  <Input id="image" type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+                  <div className="flex items-center gap-2">
+                    <Input id="image" type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+                    <Button size="sm" onClick={onGenerate} disabled={loading}>
+                      {loading ? "Generating…" : "Generate"}
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
@@ -156,20 +171,21 @@ export default function AsciiArtMaker() {
                 <div className="text-xs text-muted-foreground mt-1">{aspect.toFixed(1)} h/w</div>
               </div>
             </div>
-            <div className="md:col-span-2 space-y-2">
-              <Label>Ramp</Label>
-              <Select value={ramp} onValueChange={(v) => setRamp(v as keyof typeof RAMPS)}>
-                <SelectTrigger aria-label="Character ramp" className="h-9">
-                  <SelectValue placeholder="Select ramp" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.keys(RAMPS).map((k) => (
-                    <SelectItem key={k} value={k}>
-                      {k}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="md:col-span-6 space-y-2">
+              <Label>Character set</Label>
+              <div className="flex flex-wrap gap-1">
+                {Object.keys(RAMPS).map((k) => (
+                  <Button
+                    key={k}
+                    size="sm"
+                    variant={ramp === (k as keyof typeof RAMPS) ? "default" : "secondary"}
+                    aria-pressed={ramp === (k as keyof typeof RAMPS)}
+                    onClick={() => setRamp(k as keyof typeof RAMPS)}
+                  >
+                    {k}
+                  </Button>
+                ))}
+              </div>
             </div>
             <div className="md:col-span-2 space-y-2">
               <Label>Mode</Label>
@@ -193,18 +209,17 @@ export default function AsciiArtMaker() {
               </div>
             </div>
             <div className="md:col-span-12 flex flex-wrap gap-2 items-end">
-              <Button size="sm" onClick={onGenerate} disabled={loading}>{loading ? "Generating…" : "Generate"}</Button>
               <Button size="sm" variant="secondary" onClick={() => setRandomMode((s) => !s)}>
                 Random: {randomMode ? "ON" : "OFF"}
               </Button>
               <Button size="sm" variant="secondary" onClick={onCopy} disabled={!ascii}>
-                Copy
+                Copy as text
               </Button>
               <Button size="sm" variant="secondary" onClick={onDownload} disabled={!ascii}>
-                Download .txt
+                Save as TXT
               </Button>
               <div className="ml-auto flex items-center gap-2">
-                <Label className="text-sm text-muted-foreground">Text color</Label>
+                <Label className="text-sm text-muted-foreground">Foreground</Label>
                 <div className="flex gap-1">
                   {colorKeys.map((ck) => (
                     <button
@@ -228,13 +243,23 @@ export default function AsciiArtMaker() {
           <CardTitle className="text-base">Preview</CardTitle>
         </CardHeader>
         <CardContent className="p-3 md:p-4">
-          <pre
-            className="font-pixel max-h-[45vh] overflow-auto whitespace-pre leading-[0.9] text-xs md:text-sm"
-            style={{ color: textColor }}
-            aria-label="ASCII preview"
+          <div
+            className="rounded-md border overflow-auto"
+            style={{
+              backgroundImage:
+                `linear-gradient(to right, hsl(var(--border) / 0.2) 1px, transparent 1px),` +
+                `linear-gradient(to bottom, hsl(var(--border) / 0.2) 1px, transparent 1px)`,
+              backgroundSize: "12px 12px",
+            }}
           >
-            {ascii || ""}
-          </pre>
+            <pre
+              className="font-pixel max-h-[45vh] whitespace-pre leading-[0.9] text-xs md:text-sm px-3 py-3"
+              style={{ color: textColor }}
+              aria-label="ASCII preview"
+            >
+              {ascii || ""}
+            </pre>
+          </div>
         </CardContent>
       </Card>
     </section>
