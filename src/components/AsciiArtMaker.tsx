@@ -24,7 +24,7 @@ const colorTokenMap: Record<ColorKey, string> = {
 
 export default function AsciiArtMaker() {
   const [text, setText] = useState("HELLO WORLD");
-  const [cols, setCols] = useState(140);
+  const [cols, setCols] = useState(110);
   const [ramp, setRamp] = useState<keyof typeof RAMPS>((RAMPS as any).symbols ? ("symbols" as keyof typeof RAMPS) : "detailed");
   const [invert, setInvert] = useState(true);
   const [aspect, setAspect] = useState(2.0);
@@ -115,13 +115,13 @@ export default function AsciiArtMaker() {
   const textColor = `hsl(var(${colorTokenMap[color]}))`;
 
   return (
-    <section aria-labelledby="maker-title" className="space-y-6">
+    <section aria-labelledby="maker-title" className="space-y-4">
       <Card className="border-border/60 bg-card/70 backdrop-blur supports-[backdrop-filter]:bg-card/60 shadow-[var(--shadow-elegant,0_10px_30px_-10px_hsl(var(--primary)/0.2))]">
         <CardHeader>
-          <CardTitle id="maker-title">Generate ASCII</CardTitle>
+          <CardTitle id="maker-title" className="text-base">Generate ASCII</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid md:grid-cols-12 gap-4">
+        <CardContent className="space-y-3">
+          <div className="grid md:grid-cols-12 gap-3">
             <div className="md:col-span-6 space-y-2">
               {mode === "text" && (
                 <>
@@ -131,6 +131,7 @@ export default function AsciiArtMaker() {
                     placeholder="Type something…"
                     value={text}
                     onChange={(e) => setText(e.target.value)}
+                    className="h-9 text-sm"
                   />
                 </>
               )}
@@ -145,20 +146,20 @@ export default function AsciiArtMaker() {
               <Label>Columns</Label>
               <div className="px-1">
                 <Slider value={[cols]} min={40} max={320} step={1} onValueChange={(v) => setCols(v[0] ?? cols)} />
-                <div className="text-sm text-muted-foreground mt-1">{cols} cols</div>
+                <div className="text-xs text-muted-foreground mt-1">{cols} cols</div>
               </div>
             </div>
             <div className="md:col-span-2 space-y-2">
               <Label>Aspect</Label>
               <div className="px-1">
                 <Slider value={[aspect]} min={1.0} max={3.0} step={0.1} onValueChange={(v) => setAspect(Number(v[0] ?? aspect))} />
-                <div className="text-sm text-muted-foreground mt-1">{aspect.toFixed(1)} h/w</div>
+                <div className="text-xs text-muted-foreground mt-1">{aspect.toFixed(1)} h/w</div>
               </div>
             </div>
             <div className="md:col-span-2 space-y-2">
               <Label>Ramp</Label>
               <Select value={ramp} onValueChange={(v) => setRamp(v as keyof typeof RAMPS)}>
-                <SelectTrigger aria-label="Character ramp">
+                <SelectTrigger aria-label="Character ramp" className="h-9">
                   <SelectValue placeholder="Select ramp" />
                 </SelectTrigger>
                 <SelectContent>
@@ -173,7 +174,7 @@ export default function AsciiArtMaker() {
             <div className="md:col-span-2 space-y-2">
               <Label>Mode</Label>
               <Select value={mode} onValueChange={(v) => setMode(v as "text" | "image")}>
-                <SelectTrigger aria-label="Generation mode">
+                <SelectTrigger aria-label="Generation mode" className="h-9">
                   <SelectValue placeholder="Choose mode" />
                 </SelectTrigger>
                 <SelectContent>
@@ -192,14 +193,14 @@ export default function AsciiArtMaker() {
               </div>
             </div>
             <div className="md:col-span-12 flex flex-wrap gap-2 items-end">
-              <Button onClick={onGenerate} disabled={loading}>{loading ? "Generating…" : "Generate"}</Button>
-              <Button variant="secondary" onClick={() => setRandomMode((s) => !s)}>
+              <Button size="sm" onClick={onGenerate} disabled={loading}>{loading ? "Generating…" : "Generate"}</Button>
+              <Button size="sm" variant="secondary" onClick={() => setRandomMode((s) => !s)}>
                 Random: {randomMode ? "ON" : "OFF"}
               </Button>
-              <Button variant="secondary" onClick={onCopy} disabled={!ascii}>
+              <Button size="sm" variant="secondary" onClick={onCopy} disabled={!ascii}>
                 Copy
               </Button>
-              <Button variant="secondary" onClick={onDownload} disabled={!ascii}>
+              <Button size="sm" variant="secondary" onClick={onDownload} disabled={!ascii}>
                 Download .txt
               </Button>
               <div className="ml-auto flex items-center gap-2">
@@ -210,7 +211,7 @@ export default function AsciiArtMaker() {
                       key={ck}
                       title={ck}
                       onClick={() => setColor(ck)}
-                      className={`h-8 w-8 rounded-md border border-border aria-selected:ring-2 aria-selected:ring-ring`}
+                      className={`h-6 w-6 rounded-md border border-border aria-selected:ring-2 aria-selected:ring-ring`}
                       aria-selected={color === ck}
                       style={{ background: `hsl(var(${colorTokenMap[ck]}))` }}
                     />
@@ -224,11 +225,11 @@ export default function AsciiArtMaker() {
 
       <Card className="border-dashed">
         <CardHeader>
-          <CardTitle>Preview</CardTitle>
+          <CardTitle className="text-base">Preview</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-3 md:p-4">
           <pre
-            className="font-pixel max-h-[60vh] overflow-auto whitespace-pre leading-[1.0] text-base md:text-lg"
+            className="font-pixel max-h-[45vh] overflow-auto whitespace-pre leading-[0.9] text-xs md:text-sm"
             style={{ color: textColor }}
             aria-label="ASCII preview"
           >
