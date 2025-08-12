@@ -34,7 +34,7 @@ export default function AsciiArtMaker() {
   const [mode, setMode] = useState<"text" | "image">("image");
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
-  const [previewSize, setPreviewSize] = useState(13);
+  const [previewSize, setPreviewSize] = useState(6);
 
   const randomizeControls = () => {
     const keys = Object.keys(RAMPS) as Array<keyof typeof RAMPS>;
