@@ -24,7 +24,7 @@ const colorTokenMap: Record<ColorKey, string> = {
 
 export default function AsciiArtMaker() {
   const [text, setText] = useState("HELLO WORLD");
-  const [cols, setCols] = useState(320);
+  const [cols, setCols] = useState(150);
   const [ramp, setRamp] = useState<keyof typeof RAMPS>((RAMPS as any).symbols ? ("symbols" as keyof typeof RAMPS) : "detailed");
   const [invert, setInvert] = useState(true);
   const [aspect, setAspect] = useState(1.6);
@@ -72,7 +72,11 @@ export default function AsciiArtMaker() {
     const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const rampStr = RAMPS[ramp] || RAMPS.detailed;
     const aspectEff = measureCharAspect();
-    return imageDataToASCII(imgData, canvas.width, canvas.height, cols, rampStr, invert, aspectEff, { gamma: 0.9, samples: 3 });
+    const targetRows = 90;
+    const suggested = Math.round((targetRows * canvas.width * aspectEff) / canvas.height);
+    const dynCols = Math.max(40, Math.min(150, suggested));
+    if (dynCols !== cols) setCols(dynCols);
+    return imageDataToASCII(imgData, canvas.width, canvas.height, dynCols, rampStr, invert, aspectEff, { gamma: 0.9, samples: 3 });
   };
 
   const onGenerate = async () => {
@@ -185,11 +189,11 @@ export default function AsciiArtMaker() {
             <div className={`md:col-span-2 space-y-2 ${showAdvanced ? "" : "hidden"}`}>
               <Label>Columns</Label>
               <div className="px-1">
-                <Slider value={[cols]} min={40} max={320} step={1} onValueChange={(v) => setCols(v[0] ?? cols)} />
+                <Slider value={[cols]} min={40} max={150} step={1} onValueChange={(v) => setCols(v[0] ?? cols)} />
                 <div className="text-xs text-muted-foreground mt-1">{cols} cols</div>
                 <div className="flex gap-2 mt-2">
                   <Button size="sm" variant="secondary" onClick={() => setCols((c) => Math.max(40, c - 30))}>-30</Button>
-                  <Button size="sm" variant="secondary" onClick={() => setCols((c) => Math.min(320, c + 30))}>+30</Button>
+                  <Button size="sm" variant="secondary" onClick={() => setCols((c) => Math.min(150, c + 30))}>+30</Button>
                 </div>
               </div>
             </div>
