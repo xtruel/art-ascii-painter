@@ -1,10 +1,11 @@
 export const RAMPS: Record<string, string> = {
   blocks: " .:-=+*#%@",
   detailed:
-    " .'`\",:;Il!i><~+_-?][}{1)(|\/*tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$",
+    " .'`\",:;Il!i><~+_-?][}{1)(|\\/*tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$",
   smooth: " .'`\",:;~-_=+*#%@",
   heavy: " ░▒▓█",
-  sharp: " .,:;!ilI|/\tfxjrvnczXYUJCLQ0OZmwqpdbkhao#MW&8%B@$",
+  sharp: " .,:;!ilI|/\\\tfxjrvnczXYUJCLQ0OZmwqpdbkhao#MW&8%B@$",
+  symbols: " .'`^\"~,.:;_-+=*|/\\()[]{}<>!?%$#@&£€¥§°•·=÷×|~'\"-+_<>/\\",
 };
 
 export interface GenerateAsciiParams {

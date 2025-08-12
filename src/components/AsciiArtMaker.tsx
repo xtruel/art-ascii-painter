@@ -10,27 +10,31 @@ import { RAMPS, generateAsciiFromText, imageDataToASCII } from "@/lib/ascii";
 import { RunwareService } from "@/lib/runware";
 import { toast } from "sonner";
 
-const colorKeys = ["white", "yellow", "pink", "lime", "blue"] as const;
+const colorKeys = ["white", "yellow", "blue", "lime", "orange"] as const;
 
 type ColorKey = typeof colorKeys[number];
 
 const colorTokenMap: Record<ColorKey, string> = {
   white: "--ascii-white",
   yellow: "--ascii-yellow",
-  pink: "--ascii-pink",
-  lime: "--ascii-lime",
   blue: "--ascii-blue",
+  lime: "--ascii-lime",
+  orange: "--ascii-orange",
 };
 
 export default function AsciiArtMaker() {
   const [text, setText] = useState("HELLO WORLD");
   const [cols, setCols] = useState(140);
-  const [ramp, setRamp] = useState<keyof typeof RAMPS>("detailed");
+  const [ramp, setRamp] = useState<keyof typeof RAMPS>((RAMPS as any).symbols ? ("symbols" as keyof typeof RAMPS) : "detailed");
   const [invert, setInvert] = useState(false);
   const [aspect, setAspect] = useState(2.0);
   const [randomMode, setRandomMode] = useState(true);
   const [color, setColor] = useState<ColorKey>("white");
   const [ascii, setAscii] = useState<string>("");
+  const [mode, setMode] = useState<"text" | "image" | "ai">("text");
+  const [file, setFile] = useState<File | null>(null);
+  const [apiKey, setApiKey] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const randomizeControls = () => {
     const keys = Object.keys(RAMPS) as Array<keyof typeof RAMPS>;
@@ -40,11 +44,77 @@ export default function AsciiArtMaker() {
     setCols(c);
   };
 
-  const onGenerate = () => {
-    if (randomMode) randomizeControls();
-    const out = generateAsciiFromText({ text, cols, rampKey: ramp, invert, aspect });
-    setAscii(out);
-    if (!out) toast.error("Failed to generate ASCII");
+  const rasterImageToAscii = async (imgEl: HTMLImageElement) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = imgEl.naturalWidth || imgEl.width;
+    canvas.height = imgEl.naturalHeight || imgEl.height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return "";
+    ctx.drawImage(imgEl, 0, 0, canvas.width, canvas.height);
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const rampStr = RAMPS[ramp] || RAMPS.detailed;
+    return imageDataToASCII(imgData, canvas.width, canvas.height, cols, rampStr, invert, aspect);
+  };
+
+  const onGenerate = async () => {
+    try {
+      setLoading(true);
+      if (randomMode) randomizeControls();
+
+      if (mode === "text") {
+        const out = generateAsciiFromText({ text, cols, rampKey: ramp, invert, aspect });
+        setAscii(out);
+        if (!out) toast.error("Failed to generate ASCII");
+        return;
+      }
+
+      if (mode === "image") {
+        if (!file) {
+          toast.error("Choose an image");
+          return;
+        }
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = URL.createObjectURL(file);
+        await new Promise<void>((res, rej) => {
+          img.onload = () => res();
+          img.onerror = () => rej(new Error("Image load failed"));
+        });
+        const out = await rasterImageToAscii(img);
+        setAscii(out);
+        URL.revokeObjectURL(img.src);
+        return;
+      }
+
+      if (mode === "ai") {
+        if (!apiKey) {
+          toast.error("Add your Runware API key");
+          return;
+        }
+        const rw = new RunwareService(apiKey);
+        const result: any = await rw.generateImage({ positivePrompt: text, numberResults: 1 });
+        const url = result?.imageURL || result?.[0]?.imageURL;
+        if (!url) {
+          toast.error("AI didn't return an image");
+          return;
+        }
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = url;
+        await new Promise<void>((res, rej) => {
+          img.onload = () => res();
+          img.onerror = () => rej(new Error("AI image load failed"));
+        });
+        const out = await rasterImageToAscii(img);
+        setAscii(out);
+        return;
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Generation failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const onCopy = async () => {
@@ -77,8 +147,25 @@ export default function AsciiArtMaker() {
         <CardContent className="space-y-4">
           <div className="grid md:grid-cols-12 gap-4">
             <div className="md:col-span-6 space-y-2">
-              <Label htmlFor="prompt">Text prompt</Label>
-              <Input id="prompt" placeholder="Type something…" value={text} onChange={(e) => setText(e.target.value)} />
+              <Label htmlFor="prompt">{mode === "ai" ? "AI prompt" : "Text prompt"}</Label>
+              <Input
+                id="prompt"
+                placeholder={mode === "ai" ? "e.g., cute kawaii chibi girl, cool" : "Type something…"}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+              />
+              {mode === "image" && (
+                <div className="space-y-2">
+                  <Label htmlFor="image">Image</Label>
+                  <Input id="image" type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+                </div>
+              )}
+              {mode === "ai" && (
+                <div className="space-y-2">
+                  <Label htmlFor="api">Runware API key</Label>
+                  <Input id="api" type="password" placeholder="rw_live_…" value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
+                </div>
+              )}
             </div>
             <div className="md:col-span-2 space-y-2">
               <Label>Columns</Label>
@@ -109,6 +196,19 @@ export default function AsciiArtMaker() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="md:col-span-2 space-y-2">
+              <Label>Mode</Label>
+              <Select value={mode} onValueChange={(v) => setMode(v as any)}>
+                <SelectTrigger aria-label="Generation mode">
+                  <SelectValue placeholder="Choose mode" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="text">Text</SelectItem>
+                  <SelectItem value="image">Image</SelectItem>
+                  <SelectItem value="ai">AI</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="md:col-span-2 flex items-end gap-3">
               <div className="space-y-2">
                 <Label htmlFor="invert">Invert</Label>
@@ -119,7 +219,7 @@ export default function AsciiArtMaker() {
               </div>
             </div>
             <div className="md:col-span-12 flex flex-wrap gap-2 items-end">
-              <Button onClick={onGenerate}>Generate</Button>
+              <Button onClick={onGenerate} disabled={loading}>{loading ? "Generating…" : "Generate"}</Button>
               <Button variant="secondary" onClick={() => setRandomMode((s) => !s)}>
                 Random: {randomMode ? "ON" : "OFF"}
               </Button>
@@ -155,7 +255,7 @@ export default function AsciiArtMaker() {
         </CardHeader>
         <CardContent>
           <pre
-            className="max-h-[60vh] overflow-auto whitespace-pre leading-[1.0] text-sm md:text-base"
+            className="font-pixel max-h-[60vh] overflow-auto whitespace-pre leading-[1.0] text-base md:text-lg"
             style={{ color: textColor }}
             aria-label="ASCII preview"
           >
