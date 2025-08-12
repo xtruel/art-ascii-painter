@@ -24,7 +24,7 @@ const colorTokenMap: Record<ColorKey, string> = {
 
 export default function AsciiArtMaker() {
   const [text, setText] = useState("HELLO WORLD");
-  const [cols, setCols] = useState(118);
+  const [cols, setCols] = useState(320);
   const [ramp, setRamp] = useState<keyof typeof RAMPS>((RAMPS as any).symbols ? ("symbols" as keyof typeof RAMPS) : "detailed");
   const [invert, setInvert] = useState(true);
   const [aspect, setAspect] = useState(1.6);
@@ -163,6 +163,10 @@ export default function AsciiArtMaker() {
               <div className="px-1">
                 <Slider value={[cols]} min={40} max={320} step={1} onValueChange={(v) => setCols(v[0] ?? cols)} />
                 <div className="text-xs text-muted-foreground mt-1">{cols} cols</div>
+                <div className="flex gap-2 mt-2">
+                  <Button size="sm" variant="secondary" onClick={() => setCols((c) => Math.max(40, c - 30))}>-30</Button>
+                  <Button size="sm" variant="secondary" onClick={() => setCols((c) => Math.min(320, c + 30))}>+30</Button>
+                </div>
               </div>
             </div>
             <div className="md:col-span-2 space-y-2">
@@ -252,7 +256,7 @@ export default function AsciiArtMaker() {
         </CardHeader>
         <CardContent className="p-3 md:p-4">
           <div
-            className="rounded-md border overflow-auto"
+            className="rounded-md border overflow-hidden w-[170px] h-[170px] mx-auto"
             style={{
               backgroundImage:
                 `linear-gradient(to right, hsl(var(--border) / 0.2) 1px, transparent 1px),` +
