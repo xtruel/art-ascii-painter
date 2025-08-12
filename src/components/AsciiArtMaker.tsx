@@ -256,7 +256,7 @@ export default function AsciiArtMaker() {
         </CardHeader>
         <CardContent className="p-3 md:p-4">
           <div
-            className="rounded-md border overflow-hidden w-[170px] h-[170px] mx-auto"
+            className="rounded-md border overflow-hidden w-[510px] h-[510px] mx-auto"
             style={{
               backgroundImage:
                 `linear-gradient(to right, hsl(var(--border) / 0.2) 1px, transparent 1px),` +
@@ -265,7 +265,7 @@ export default function AsciiArtMaker() {
             }}
           >
             <pre
-              className="font-ascii max-h-[45vh] whitespace-pre px-2 py-2"
+              className="font-ascii max-h-[45vh] whitespace-pre p-[5%]"
               style={{ color: textColor, fontSize: `${previewSize}px`, lineHeight: 0.8 }}
               aria-label="ASCII preview"
             >
