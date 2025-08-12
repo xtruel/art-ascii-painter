@@ -289,7 +289,7 @@ export default function AsciiArtMaker() {
             }}
           >
             <pre
-              className="font-ascii max-h-[45vh] whitespace-pre p-[5%]"
+              className="font-ascii max-h-[45vh] whitespace-pre px-[7.5%] pt-[7.5%] pb-[15%]"
               style={{ color: textColor, fontSize: `${previewSize}px`, lineHeight: 0.8 }}
               aria-label="ASCII preview"
             >
