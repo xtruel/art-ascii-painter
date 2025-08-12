@@ -64,7 +64,7 @@ All colors MUST be HSL.
     /* ASCII palette */
     --ascii-white: 0 0% 100%;
     --ascii-yellow: 49 100% 50%;
-    --ascii-pink: 315 100% 64%;
+    --ascii-orange: 28 100% 55%;
     --ascii-lime: 90 100% 50%;
     --ascii-blue: 210 100% 65%;
   }
@@ -114,7 +114,7 @@ All colors MUST be HSL.
 
     --ascii-white: 0 0% 100%;
     --ascii-yellow: 49 100% 60%;
-    --ascii-pink: 315 100% 70%;
+    --ascii-orange: 30 100% 60%;
     --ascii-lime: 90 100% 60%;
     --ascii-blue: 210 90% 70%;
   }

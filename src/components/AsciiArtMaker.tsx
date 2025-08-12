@@ -6,7 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { RAMPS, generateAsciiFromText } from "@/lib/ascii";
+import { RAMPS, generateAsciiFromText, imageDataToASCII } from "@/lib/ascii";
+import { RunwareService } from "@/lib/runware";
 import { toast } from "sonner";
 
 const colorKeys = ["white", "yellow", "pink", "lime", "blue"] as const;
