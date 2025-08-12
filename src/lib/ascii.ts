@@ -52,13 +52,18 @@ export function imageDataToASCII(
   cols: number,
   ramp: string,
   invert = false,
-  aspect = 2.0
+  aspect = 2.0,
+  options?: { gamma?: number; samples?: number }
 ): string {
   cols = Math.max(1, Math.min(800, cols | 0));
   const cellW = w / cols;
-  const rows = Math.max(1, Math.floor(h / (cellW * Math.max(0.000001, aspect))));
+  const cellH = Math.max(0.000001, cellW * aspect);
+  const rows = Math.max(1, Math.floor(h / cellH));
+
   const rampChars = ramp.split("");
   const L = rampChars.length;
+  const samples = Math.max(1, Math.min(6, options?.samples ?? 3));
+  const gamma = options?.gamma ?? 1.0;
 
   const get = (x: number, y: number) => {
     const ix = Math.max(0, Math.min(w - 1, x | 0));
@@ -67,18 +72,29 @@ export function imageDataToASCII(
     const r = imgData.data[i];
     const g = imgData.data[i + 1];
     const b = imgData.data[i + 2];
-    // luminance approximation
-    return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255; // luminance
   };
 
   const lines: string[] = [];
   for (let r = 0; r < rows; r++) {
     let line = "";
     for (let c = 0; c < cols; c++) {
-      const cx = (c + 0.5) * cellW;
-      const cy = (r + 0.5) * cellW * aspect;
-      let v = get(cx, cy);
+      // Average luminance over an s x s grid within the cell (box sampling)
+      const startX = c * cellW;
+      const startY = r * cellH;
+      let sum = 0;
+      for (let sy = 0; sy < samples; sy++) {
+        for (let sx = 0; sx < samples; sx++) {
+          const px = startX + ((sx + 0.5) / samples) * cellW;
+          const py = startY + ((sy + 0.5) / samples) * cellH;
+          sum += get(px, py);
+        }
+      }
+      let v = sum / (samples * samples);
       if (invert) v = 1 - v;
+      // gamma correction for better contrast without grain
+      if (gamma !== 1) v = Math.max(0, Math.min(1, Math.pow(v, gamma)));
+
       const idx = Math.min(L - 1, Math.max(0, Math.round(v * (L - 1))));
       line += rampChars[idx];
     }

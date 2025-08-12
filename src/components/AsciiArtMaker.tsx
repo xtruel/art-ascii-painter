@@ -35,6 +35,7 @@ export default function AsciiArtMaker() {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [previewSize, setPreviewSize] = useState(6);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const randomizeControls = () => {
     const keys = Object.keys(RAMPS) as Array<keyof typeof RAMPS>;
@@ -42,6 +43,23 @@ export default function AsciiArtMaker() {
     setRamp(k);
     const c = Math.floor(80 + Math.random() * 160);
     setCols(c);
+  };
+
+  const measureCharAspect = () => {
+    try {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return aspect;
+      const fontSize = previewSize; // px
+      const lineH = 0.8; // matches <pre> style
+      ctx.font = `${fontSize}px "Press Start 2P", "VT323", ui-monospace, Menlo, Consolas, monospace`;
+      const charW = ctx.measureText("M").width || fontSize * 0.6;
+      const charH = fontSize * lineH;
+      const ratio = charH / Math.max(1, charW);
+      return Math.max(0.6, Math.min(3, ratio));
+    } catch {
+      return aspect;
+    }
   };
 
   const rasterImageToAscii = async (imgEl: HTMLImageElement) => {
@@ -53,7 +71,8 @@ export default function AsciiArtMaker() {
     ctx.drawImage(imgEl, 0, 0, canvas.width, canvas.height);
     const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const rampStr = RAMPS[ramp] || RAMPS.detailed;
-    return imageDataToASCII(imgData, canvas.width, canvas.height, cols, rampStr, invert, aspect);
+    const aspectEff = measureCharAspect();
+    return imageDataToASCII(imgData, canvas.width, canvas.height, cols, rampStr, invert, aspectEff, { gamma: 0.9, samples: 3 });
   };
 
   const onGenerate = async () => {
@@ -158,7 +177,12 @@ export default function AsciiArtMaker() {
                 </div>
               )}
             </div>
-            <div className="md:col-span-2 space-y-2">
+            <div className="md:col-span-6">
+              <Button size="sm" variant="ghost" onClick={() => setShowAdvanced((v) => !v)}>
+                {showAdvanced ? "Hide advanced" : "Advanced"}
+              </Button>
+            </div>
+            <div className={`md:col-span-2 space-y-2 ${showAdvanced ? "" : "hidden"}`}>
               <Label>Columns</Label>
               <div className="px-1">
                 <Slider value={[cols]} min={40} max={320} step={1} onValueChange={(v) => setCols(v[0] ?? cols)} />
@@ -169,21 +193,21 @@ export default function AsciiArtMaker() {
                 </div>
               </div>
             </div>
-            <div className="md:col-span-2 space-y-2">
+            <div className={`md:col-span-2 space-y-2 ${showAdvanced ? "" : "hidden"}`}>
               <Label>Aspect</Label>
               <div className="px-1">
                 <Slider value={[aspect]} min={1.0} max={3.0} step={0.1} onValueChange={(v) => setAspect(Number(v[0] ?? aspect))} />
                 <div className="text-xs text-muted-foreground mt-1">{aspect.toFixed(1)} h/w</div>
               </div>
             </div>
-            <div className="md:col-span-2 space-y-2">
+            <div className={`md:col-span-2 space-y-2 ${showAdvanced ? "" : "hidden"}`}>
               <Label>Preview size</Label>
               <div className="px-1">
                 <Slider value={[previewSize]} min={6} max={14} step={1} onValueChange={(v) => setPreviewSize(Number(v[0] ?? previewSize))} />
                 <div className="text-xs text-muted-foreground mt-1">{previewSize}px</div>
               </div>
             </div>
-            <div className="md:col-span-6 space-y-2">
+            <div className={`md:col-span-6 space-y-2 ${showAdvanced ? "" : "hidden"}`}>
               <Label>Character set</Label>
               <div className="flex flex-wrap gap-1">
                 {Object.keys(RAMPS).map((k) => (
@@ -199,7 +223,7 @@ export default function AsciiArtMaker() {
                 ))}
               </div>
             </div>
-            <div className="md:col-span-2 space-y-2">
+            <div className={`md:col-span-2 space-y-2 ${showAdvanced ? "" : "hidden"}`}>
               <Label>Mode</Label>
               <Select value={mode} onValueChange={(v) => setMode(v as "text" | "image")}>
                 <SelectTrigger aria-label="Generation mode" className="h-9">
@@ -211,7 +235,7 @@ export default function AsciiArtMaker() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="md:col-span-2 flex items-end gap-3">
+            <div className={`md:col-span-2 flex items-end gap-3 ${showAdvanced ? "" : "hidden"}`}>
               <div className="space-y-2">
                 <Label htmlFor="invert">Invert</Label>
                 <div className="flex items-center gap-2">
@@ -220,7 +244,7 @@ export default function AsciiArtMaker() {
                 </div>
               </div>
             </div>
-            <div className="md:col-span-12 flex flex-wrap gap-2 items-end">
+            <div className={`md:col-span-12 flex flex-wrap gap-2 items-end ${showAdvanced ? "" : "hidden"}`}>
               <Button size="sm" variant="secondary" onClick={() => setRandomMode((s) => !s)}>
                 Random: {randomMode ? "ON" : "OFF"}
               </Button>
