@@ -7,7 +7,7 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { RAMPS, generateAsciiFromText, imageDataToASCII } from "@/lib/ascii";
-import { RunwareService } from "@/lib/runware";
+
 import { toast } from "sonner";
 
 const colorKeys = ["white", "yellow", "blue", "lime", "orange"] as const;
@@ -31,9 +31,8 @@ export default function AsciiArtMaker() {
   const [randomMode, setRandomMode] = useState(true);
   const [color, setColor] = useState<ColorKey>("white");
   const [ascii, setAscii] = useState<string>("");
-  const [mode, setMode] = useState<"text" | "image" | "ai">("ai");
+  const [mode, setMode] = useState<"text" | "image">("image");
   const [file, setFile] = useState<File | null>(null);
-  const [apiKey, setApiKey] = useState("");
   const [loading, setLoading] = useState(false);
 
   const randomizeControls = () => {
@@ -86,29 +85,6 @@ export default function AsciiArtMaker() {
         return;
       }
 
-      if (mode === "ai") {
-        if (!apiKey) {
-          toast.error("Add your Runware API key");
-          return;
-        }
-        const rw = new RunwareService(apiKey);
-        const result: any = await rw.generateImage({ positivePrompt: text, numberResults: 1 });
-        const url = result?.imageURL || result?.[0]?.imageURL;
-        if (!url) {
-          toast.error("AI didn't return an image");
-          return;
-        }
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.src = url;
-        await new Promise<void>((res, rej) => {
-          img.onload = () => res();
-          img.onerror = () => rej(new Error("AI image load failed"));
-        });
-        const out = await rasterImageToAscii(img);
-        setAscii(out);
-        return;
-      }
     } catch (e) {
       console.error(e);
       toast.error("Generation failed");
@@ -147,23 +123,21 @@ export default function AsciiArtMaker() {
         <CardContent className="space-y-4">
           <div className="grid md:grid-cols-12 gap-4">
             <div className="md:col-span-6 space-y-2">
-              <Label htmlFor="prompt">{mode === "ai" ? "AI prompt" : "Text prompt"}</Label>
-              <Input
-                id="prompt"
-                placeholder={mode === "ai" ? "e.g., cute kawaii chibi girl, cool" : "Type something…"}
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-              />
+              {mode === "text" && (
+                <>
+                  <Label htmlFor="prompt">Text prompt</Label>
+                  <Input
+                    id="prompt"
+                    placeholder="Type something…"
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                  />
+                </>
+              )}
               {mode === "image" && (
                 <div className="space-y-2">
                   <Label htmlFor="image">Image</Label>
                   <Input id="image" type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-                </div>
-              )}
-              {mode === "ai" && (
-                <div className="space-y-2">
-                  <Label htmlFor="api">Runware API key</Label>
-                  <Input id="api" type="password" placeholder="rw_live_…" value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
                 </div>
               )}
             </div>
@@ -198,14 +172,13 @@ export default function AsciiArtMaker() {
             </div>
             <div className="md:col-span-2 space-y-2">
               <Label>Mode</Label>
-              <Select value={mode} onValueChange={(v) => setMode(v as any)}>
+              <Select value={mode} onValueChange={(v) => setMode(v as "text" | "image")}>
                 <SelectTrigger aria-label="Generation mode">
                   <SelectValue placeholder="Choose mode" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="text">Text</SelectItem>
                   <SelectItem value="image">Image</SelectItem>
-                  <SelectItem value="ai">AI</SelectItem>
                 </SelectContent>
               </Select>
             </div>
