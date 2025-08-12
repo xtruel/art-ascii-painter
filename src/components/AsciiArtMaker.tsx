@@ -26,12 +26,12 @@ export default function AsciiArtMaker() {
   const [text, setText] = useState("HELLO WORLD");
   const [cols, setCols] = useState(140);
   const [ramp, setRamp] = useState<keyof typeof RAMPS>((RAMPS as any).symbols ? ("symbols" as keyof typeof RAMPS) : "detailed");
-  const [invert, setInvert] = useState(false);
+  const [invert, setInvert] = useState(true);
   const [aspect, setAspect] = useState(2.0);
   const [randomMode, setRandomMode] = useState(true);
   const [color, setColor] = useState<ColorKey>("white");
   const [ascii, setAscii] = useState<string>("");
-  const [mode, setMode] = useState<"text" | "image" | "ai">("text");
+  const [mode, setMode] = useState<"text" | "image" | "ai">("ai");
   const [file, setFile] = useState<File | null>(null);
   const [apiKey, setApiKey] = useState("");
   const [loading, setLoading] = useState(false);
