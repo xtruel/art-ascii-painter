@@ -34,6 +34,7 @@ export default function AsciiArtMaker() {
   const [mode, setMode] = useState<"text" | "image">("image");
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [previewSize, setPreviewSize] = useState(9);
 
   const randomizeControls = () => {
     const keys = Object.keys(RAMPS) as Array<keyof typeof RAMPS>;
@@ -171,6 +172,13 @@ export default function AsciiArtMaker() {
                 <div className="text-xs text-muted-foreground mt-1">{aspect.toFixed(1)} h/w</div>
               </div>
             </div>
+            <div className="md:col-span-2 space-y-2">
+              <Label>Preview size</Label>
+              <div className="px-1">
+                <Slider value={[previewSize]} min={6} max={14} step={1} onValueChange={(v) => setPreviewSize(Number(v[0] ?? previewSize))} />
+                <div className="text-xs text-muted-foreground mt-1">{previewSize}px</div>
+              </div>
+            </div>
             <div className="md:col-span-6 space-y-2">
               <Label>Character set</Label>
               <div className="flex flex-wrap gap-1">
@@ -253,8 +261,8 @@ export default function AsciiArtMaker() {
             }}
           >
             <pre
-              className="font-pixel max-h-[45vh] whitespace-pre leading-[0.9] text-xs md:text-sm px-3 py-3"
-              style={{ color: textColor }}
+              className="font-pixel max-h-[45vh] whitespace-pre px-2 py-2"
+              style={{ color: textColor, fontSize: `${previewSize}px`, lineHeight: 0.8 }}
               aria-label="ASCII preview"
             >
               {ascii || ""}
