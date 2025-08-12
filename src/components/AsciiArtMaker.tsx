@@ -34,7 +34,7 @@ export default function AsciiArtMaker() {
   const [mode, setMode] = useState<"text" | "image">("image");
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
-  const [previewSize, setPreviewSize] = useState(6);
+  const [previewSize, setPreviewSize] = useState(2);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const randomizeControls = () => {
@@ -203,7 +203,7 @@ export default function AsciiArtMaker() {
             <div className={`md:col-span-2 space-y-2 ${showAdvanced ? "" : "hidden"}`}>
               <Label>Preview size</Label>
               <div className="px-1">
-                <Slider value={[previewSize]} min={6} max={14} step={1} onValueChange={(v) => setPreviewSize(Number(v[0] ?? previewSize))} />
+                <Slider value={[previewSize]} min={2} max={14} step={1} onValueChange={(v) => setPreviewSize(Number(v[0] ?? previewSize))} />
                 <div className="text-xs text-muted-foreground mt-1">{previewSize}px</div>
               </div>
             </div>
