@@ -1,12 +1,12 @@
 import AsciiArtMaker from "@/components/AsciiArtMaker";
 import AnimatedAsciiBackground from "@/components/AnimatedAsciiBackground";
-import MatrixGlobeBackground from "@/components/MatrixGlobeBackground";
+import SimpleJavaBackground from "@/components/MatrixGlobeBackground";
 
 const Index = () => {
   return (
     <div className="min-h-screen relative">
       <AnimatedAsciiBackground />
-      <MatrixGlobeBackground />
+      <SimpleJavaBackground />
       <div className="relative z-20">
         <AsciiArtMaker />
       </div>
