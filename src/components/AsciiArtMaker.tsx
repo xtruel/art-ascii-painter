@@ -158,36 +158,81 @@ export default function AsciiArtMaker() {
 
   const textColor = `hsl(var(${colorTokenMap[color]}))`;
 
-  // Calculate optimal font size for current viewport and ASCII content
-  const calculateOptimalFontSize = () => {
-    if (!ascii) return previewSize;
+  // Calculate optimal font size and container dimensions for current viewport and ASCII content
+  const calculateOptimalDisplay = () => {
+    if (!ascii) return { fontSize: previewSize, containerStyle: {} };
     
-    const lines = ascii.split('\n');
+    const lines = ascii.split('\n').filter(line => line.trim());
     const maxLineLength = Math.max(...lines.map(line => line.length));
     const numLines = lines.length;
     
+    // Calculate ASCII aspect ratio
+    const asciiAspectRatio = maxLineLength / numLines;
+    
     if (isFullscreen) {
       // For fullscreen, use viewport dimensions
-      const viewportWidth = window.innerWidth * 0.95;
-      const viewportHeight = window.innerHeight * 0.9;
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight - 100; // Leave space for header
       
-      const fontSizeByWidth = viewportWidth / (maxLineLength * 0.6); // 0.6 is char width ratio
-      const fontSizeByHeight = viewportHeight / (numLines * 0.8); // 0.8 is line height ratio
+      let containerWidth, containerHeight;
       
-      return Math.min(fontSizeByWidth, fontSizeByHeight, 24); // Cap at 24px
+      // Determine container size based on ASCII aspect ratio
+      if (asciiAspectRatio > viewportWidth / viewportHeight) {
+        // ASCII is wider - fit to width
+        containerWidth = viewportWidth * 0.95;
+        containerHeight = containerWidth / asciiAspectRatio;
+      } else {
+        // ASCII is taller - fit to height
+        containerHeight = viewportHeight * 0.9;
+        containerWidth = containerHeight * asciiAspectRatio;
+      }
+      
+      // Calculate font size to fit exactly
+      const fontSizeByWidth = containerWidth / (maxLineLength * 0.6);
+      const fontSizeByHeight = containerHeight / (numLines * 0.8);
+      const fontSize = Math.min(fontSizeByWidth, fontSizeByHeight);
+      
+      return {
+        fontSize: Math.max(2, Math.min(fontSize, 32)),
+        containerStyle: {
+          width: `${containerWidth}px`,
+          height: `${containerHeight}px`,
+          maxWidth: 'none',
+          maxHeight: 'none'
+        }
+      };
     } else {
-      // For regular preview, use container dimensions
-      const containerWidth = Math.min(window.innerWidth * 0.9, 1200);
-      const containerHeight = Math.min(window.innerHeight * 0.6, 800);
+      // For regular preview
+      const maxContainerWidth = Math.min(window.innerWidth * 0.9, 1200);
+      const maxContainerHeight = Math.min(window.innerHeight * 0.6, 600);
+      
+      let containerWidth, containerHeight;
+      
+      // Determine container size based on ASCII aspect ratio
+      if (asciiAspectRatio > maxContainerWidth / maxContainerHeight) {
+        containerWidth = maxContainerWidth;
+        containerHeight = containerWidth / asciiAspectRatio;
+      } else {
+        containerHeight = maxContainerHeight;
+        containerWidth = containerHeight * asciiAspectRatio;
+      }
       
       const fontSizeByWidth = containerWidth / (maxLineLength * 0.6);
       const fontSizeByHeight = containerHeight / (numLines * 0.8);
+      const fontSize = Math.min(fontSizeByWidth, fontSizeByHeight);
       
-      return Math.min(fontSizeByWidth, fontSizeByHeight, 16); // Cap at 16px for regular view
+      return {
+        fontSize: Math.max(1, Math.min(fontSize, 16)),
+        containerStyle: {
+          width: `${containerWidth}px`,
+          height: `${containerHeight}px`,
+          minHeight: `${containerHeight}px`
+        }
+      };
     }
   };
 
-  const optimalFontSize = Math.max(1, calculateOptimalFontSize()); // Minimum 1px
+  const { fontSize: optimalFontSize, containerStyle } = calculateOptimalDisplay();
 
   return (
     <section aria-labelledby="maker-title" className="space-y-4 mx-auto max-w-3xl">
@@ -344,20 +389,21 @@ export default function AsciiArtMaker() {
         </CardHeader>
         <CardContent className="p-3 md:p-4">
           <div
-            className={`rounded-md border overflow-hidden w-full mx-auto ${
+            className={`rounded-md border overflow-hidden mx-auto ${
               isFullscreen 
                 ? "fixed inset-0 z-50 bg-background rounded-none border-0 flex flex-col" 
-                : "min-h-[60vh]"
+                : "flex items-center justify-center"
             }`}
             style={{
               backgroundImage: !isFullscreen ? 
                 `linear-gradient(to right, hsl(var(--border) / 0.2) 1px, transparent 1px),` +
                 `linear-gradient(to bottom, hsl(var(--border) / 0.2) 1px, transparent 1px)` : 'none',
               backgroundSize: "12px 12px",
+              ...(!isFullscreen && { minHeight: '60vh' })
             }}
           >
             {isFullscreen && (
-              <div className="flex justify-between items-center p-4 border-b">
+              <div className="flex justify-between items-center p-4 border-b bg-background">
                 <h3 className="text-lg font-semibold">ASCII Art Preview</h3>
                 <Button
                   size="sm"
@@ -368,24 +414,25 @@ export default function AsciiArtMaker() {
                 </Button>
               </div>
             )}
-            <pre
-              className={`font-ascii whitespace-pre overflow-auto flex items-center justify-center ${
-                isFullscreen ? "flex-1 p-8" : "h-full w-full p-4"
-              }`}
-              style={{ 
-                color: textColor, 
-                fontSize: `${optimalFontSize}px`, 
-                lineHeight: 0.8,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-              aria-label="ASCII preview"
+            <div
+              className={`${isFullscreen ? "flex-1 flex items-center justify-center p-8" : "flex items-center justify-center p-4"}`}
+              style={containerStyle}
             >
-              <div style={{ textAlign: 'center' }}>
+              <pre
+                className="font-ascii whitespace-pre overflow-hidden"
+                style={{ 
+                  color: textColor, 
+                  fontSize: `${optimalFontSize}px`, 
+                  lineHeight: 0.8,
+                  textAlign: 'center',
+                  margin: 0,
+                  padding: 0
+                }}
+                aria-label="ASCII preview"
+              >
                 {ascii || "Generate ASCII art to see preview"}
-              </div>
-            </pre>
+              </pre>
+            </div>
           </div>
         </CardContent>
       </Card>
