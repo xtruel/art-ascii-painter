@@ -36,6 +36,7 @@ export default function AsciiArtMaker() {
   const [loading, setLoading] = useState(false);
   const [previewSize, setPreviewSize] = useState(2);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const randomizeControls = () => {
     const keys = Object.keys(RAMPS) as Array<keyof typeof RAMPS>;
@@ -156,6 +157,37 @@ export default function AsciiArtMaker() {
   };
 
   const textColor = `hsl(var(${colorTokenMap[color]}))`;
+
+  // Calculate optimal font size for current viewport and ASCII content
+  const calculateOptimalFontSize = () => {
+    if (!ascii) return previewSize;
+    
+    const lines = ascii.split('\n');
+    const maxLineLength = Math.max(...lines.map(line => line.length));
+    const numLines = lines.length;
+    
+    if (isFullscreen) {
+      // For fullscreen, use viewport dimensions
+      const viewportWidth = window.innerWidth * 0.95;
+      const viewportHeight = window.innerHeight * 0.9;
+      
+      const fontSizeByWidth = viewportWidth / (maxLineLength * 0.6); // 0.6 is char width ratio
+      const fontSizeByHeight = viewportHeight / (numLines * 0.8); // 0.8 is line height ratio
+      
+      return Math.min(fontSizeByWidth, fontSizeByHeight, 24); // Cap at 24px
+    } else {
+      // For regular preview, use container dimensions
+      const containerWidth = Math.min(window.innerWidth * 0.9, 1200);
+      const containerHeight = Math.min(window.innerHeight * 0.6, 800);
+      
+      const fontSizeByWidth = containerWidth / (maxLineLength * 0.6);
+      const fontSizeByHeight = containerHeight / (numLines * 0.8);
+      
+      return Math.min(fontSizeByWidth, fontSizeByHeight, 16); // Cap at 16px for regular view
+    }
+  };
+
+  const optimalFontSize = Math.max(1, calculateOptimalFontSize()); // Minimum 1px
 
   return (
     <section aria-labelledby="maker-title" className="space-y-4 mx-auto max-w-3xl">
@@ -298,24 +330,51 @@ export default function AsciiArtMaker() {
       </Card>
 
       <Card className="border-dashed">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base">Preview</CardTitle>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setIsFullscreen(!isFullscreen)}
+            >
+              {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="p-3 md:p-4">
           <div
-            className="rounded-md border overflow-hidden w-full max-w-4xl mx-auto aspect-square"
+            className={`rounded-md border overflow-hidden w-full mx-auto ${
+              isFullscreen 
+                ? "fixed inset-0 z-50 bg-background rounded-none border-0 flex flex-col" 
+                : "min-h-[60vh]"
+            }`}
             style={{
-              backgroundImage:
+              backgroundImage: !isFullscreen ? 
                 `linear-gradient(to right, hsl(var(--border) / 0.2) 1px, transparent 1px),` +
-                `linear-gradient(to bottom, hsl(var(--border) / 0.2) 1px, transparent 1px)`,
+                `linear-gradient(to bottom, hsl(var(--border) / 0.2) 1px, transparent 1px)` : 'none',
               backgroundSize: "12px 12px",
             }}
           >
+            {isFullscreen && (
+              <div className="flex justify-between items-center p-4 border-b">
+                <h3 className="text-lg font-semibold">ASCII Art Preview</h3>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsFullscreen(false)}
+                >
+                  Close
+                </Button>
+              </div>
+            )}
             <pre
-              className="font-ascii h-full w-full whitespace-pre overflow-auto p-4 flex items-center justify-center"
+              className={`font-ascii whitespace-pre overflow-auto flex items-center justify-center ${
+                isFullscreen ? "flex-1 p-8" : "h-full w-full p-4"
+              }`}
               style={{ 
                 color: textColor, 
-                fontSize: `${previewSize}px`, 
+                fontSize: `${optimalFontSize}px`, 
                 lineHeight: 0.8,
                 display: 'flex',
                 alignItems: 'center',
@@ -324,7 +383,7 @@ export default function AsciiArtMaker() {
               aria-label="ASCII preview"
             >
               <div style={{ textAlign: 'center' }}>
-                {ascii || ""}
+                {ascii || "Generate ASCII art to see preview"}
               </div>
             </pre>
           </div>
