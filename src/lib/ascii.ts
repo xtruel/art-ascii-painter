@@ -96,7 +96,9 @@ export function imageDataToASCII(
       if (gamma !== 1) v = Math.max(0, Math.min(1, Math.pow(v, gamma)));
 
       const idx = Math.min(L - 1, Math.max(0, Math.round(v * (L - 1))));
-      line += rampChars[idx];
+      const char = rampChars[idx];
+      // Add space after each character for cooler spacing
+      line += char + " ";
     }
     lines.push(line);
   }
