@@ -73,26 +73,27 @@ export default function AsciiArtMaker() {
     const rampStr = RAMPS[ramp] || RAMPS.detailed;
     const aspectEff = measureCharAspect();
     
-    // Target max 7000 characters for good quantization
-    const maxChars = 7000;
+    // Target closer to 7000 characters for bigger output
+    const maxChars = 6500; // Use most of the budget
     const aspectRatio = canvas.width / canvas.height;
     
-    // Calculate optimal dimensions within character limit
-    let targetRows = Math.sqrt(maxChars / aspectRatio);
-    let targetCols = targetRows * aspectRatio;
+    // Calculate dimensions to maximize character usage
+    let targetCols = Math.sqrt(maxChars * aspectRatio);
+    let targetRows = targetCols / aspectRatio;
     
-    // Ensure we stay within bounds and character limit
-    targetRows = Math.floor(Math.min(100, targetRows));
+    // Round and ensure we use character budget efficiently
     targetCols = Math.floor(Math.min(150, targetCols));
+    targetRows = Math.floor(targetRows);
     
-    // Verify total chars don't exceed limit
-    if (targetRows * targetCols > maxChars) {
-      const scale = Math.sqrt(maxChars / (targetRows * targetCols));
+    // If we're under budget, increase size proportionally
+    const actualChars = targetCols * targetRows;
+    if (actualChars < maxChars * 0.8) {
+      const scale = Math.sqrt(maxChars * 0.9 / actualChars);
+      targetCols = Math.floor(Math.min(150, targetCols * scale));
       targetRows = Math.floor(targetRows * scale);
-      targetCols = Math.floor(targetCols * scale);
     }
     
-    const dynCols = Math.max(40, targetCols);
+    const dynCols = Math.max(80, targetCols); // Higher minimum for bigger output
     if (dynCols !== cols) setCols(dynCols);
     return imageDataToASCII(imgData, canvas.width, canvas.height, dynCols, rampStr, invert, aspectEff, { gamma: 0.9, samples: 3 });
   };
