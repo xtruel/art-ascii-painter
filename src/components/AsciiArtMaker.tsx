@@ -403,11 +403,72 @@ const AsciiArtMaker = () => {
           </Tabs>
 
           {/* Action Buttons */}
-          <div className="space-y-2">
+          <div className="space-y-2 relative">
+            {/* Java Globe Animation around Generate Button */}
+            <div className="absolute -inset-4 pointer-events-none">
+              <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 text-xs font-mono text-accent/60">
+                <div>// AsciiGenerator.java</div>
+              </div>
+              
+              <div className="absolute -left-6 top-1/2 transform -translate-y-1/2">
+                <div 
+                  className="text-xs font-mono text-primary/70 leading-none"
+                  style={{
+                    transform: `rotateY(${Date.now() * 0.001 % 6.28}rad)`,
+                    animation: 'spin 8s linear infinite'
+                  }}
+                >
+                  <div>  .--.</div>
+                  <div> /ASCII\</div>
+                  <div>|GLOBE|</div>
+                  <div> \____/</div>
+                </div>
+              </div>
+              
+              <div className="absolute -right-6 top-1/2 transform -translate-y-1/2">
+                <div 
+                  className="text-xs font-mono text-secondary/70 leading-none"
+                  style={{
+                    transform: `rotateY(${-Date.now() * 0.001 % 6.28}rad)`,
+                    animation: 'spin 8s linear infinite reverse'
+                  }}
+                >
+                  <div>  ●</div>
+                  <div> /|\</div>
+                  <div>JAVA</div>
+                  <div> ___</div>
+                </div>
+              </div>
+              
+              <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs font-mono text-purple-400/50">
+                <div>rotate(); print();</div>
+              </div>
+              
+              {/* Floating particles around button */}
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="absolute text-sm font-mono text-accent/40"
+                  style={{
+                    top: `${25 * i}%`,
+                    left: `${i % 2 === 0 ? -20 : 120}%`,
+                    transform: `translateY(${Math.sin((Date.now() * 0.003 + i * 2) % 6.28) * 8}px)`,
+                    animation: `float-${i} ${2 + i}s ease-in-out infinite`
+                  }}
+                >
+                  {['▲', '●', '◆', '▼'][i-1]}
+                </div>
+              ))}
+            </div>
+
             <Button 
               onClick={onGenerate} 
               disabled={isLoading}
-              className="w-full bg-brand hover:bg-brand/90 text-white"
+              className="w-full bg-brand hover:bg-brand/90 text-white relative z-10 shadow-lg"
+              style={{
+                boxShadow: '0 0 20px rgba(var(--brand-rgb), 0.3)',
+                animation: isLoading ? 'pulse 2s infinite' : 'none'
+              }}
             >
               {isLoading ? "Generating..." : "Generate ASCII"}
             </Button>

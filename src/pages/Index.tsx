@@ -6,7 +6,6 @@ const Index = () => {
   return (
     <div className="min-h-screen relative">
       <AnimatedAsciiBackground />
-      <SidebarJavaGlobe />
       <div className="relative z-20">
         <AsciiArtMaker />
       </div>
