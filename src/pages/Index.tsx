@@ -7,7 +7,7 @@ const Index = () => {
     <div className="min-h-screen relative">
       <AnimatedAsciiBackground />
       <MatrixGlobeBackground />
-      <div className="relative z-10">
+      <div className="relative z-20">
         <AsciiArtMaker />
       </div>
     </div>
