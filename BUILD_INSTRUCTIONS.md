@@ -1,4 +1,4 @@
-# aiR---//generatorAsc11...!! - itch.io Beta Build Instructions
+# aiR---//generatorAsc11...!! - Beta 2 Build Instructions
 
 ## Building for itch.io
 
@@ -26,15 +26,18 @@ This app is configured to work perfectly with itch.io's file hosting system.
 6. Enable "This file will be played in the browser"
 7. Set viewport dimensions (recommended: 1200x800 or fullscreen)
 
-### Features Included in Beta:
+### Features Updated in Beta 2:
 
+- ✅ Removed Java globe animation (cleaner interface)
+- ✅ Simplified controls - removed columns slider, kept only aspect ratio
+- ✅ Enhanced image processing workflow
 - ✅ HashRouter for file:// protocol compatibility
 - ✅ Animated ASCII art background decorations
 - ✅ Dual theme system (dark/light with red/purple palettes)
 - ✅ Responsive sidebar layout
 - ✅ Text and image ASCII generation
 - ✅ Copy/download functionality
-- ✅ Randomize controls (shuffle button)
+- ✅ 5 Style presets (RETRO, MINIMAL, DENSE, NEON, CYBER)
 - ✅ Character spacing and customization
 - ✅ Multiple ASCII character ramps
 - ✅ Mobile-responsive design
