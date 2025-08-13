@@ -64,9 +64,16 @@ All colors MUST be HSL.
     /* ASCII palette */
     --ascii-white: 0 0% 100%;
     --ascii-yellow: 49 100% 50%;
-    --ascii-orange: 28 100% 55%;
+    --ascii-red: 0 85% 55%;
     --ascii-lime: 90 100% 50%;
     --ascii-blue: 210 100% 65%;
+    --ascii-purple: 270 85% 65%;
+
+    /* Theme backgrounds */
+    --theme-dark-bg: 0 0% 8%;
+    --theme-light-bg: 220 70% 20%;
+    --theme-dark-surface: 0 0% 12%;
+    --theme-light-surface: 220 50% 95%;
   }
 
   .dark {
@@ -114,9 +121,10 @@ All colors MUST be HSL.
 
     --ascii-white: 0 0% 100%;
     --ascii-yellow: 49 100% 60%;
-    --ascii-orange: 30 100% 60%;
+    --ascii-red: 0 90% 60%;
     --ascii-lime: 90 100% 60%;
     --ascii-blue: 210 90% 70%;
+    --ascii-purple: 270 90% 70%;
   }
 }
 

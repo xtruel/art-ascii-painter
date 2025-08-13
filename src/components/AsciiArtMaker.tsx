@@ -1,443 +1,421 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import React, { useState, useRef, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RAMPS, generateAsciiFromText, imageDataToASCII } from "@/lib/ascii";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  Download, 
+  Copy, 
+  Maximize2, 
+  Minimize2, 
+  Shuffle, 
+  Sun, 
+  Moon,
+  Upload,
+  Palette
+} from "lucide-react";
 
-import { toast } from "sonner";
-
-const colorKeys = ["white", "yellow", "blue", "lime", "orange"] as const;
-
-type ColorKey = typeof colorKeys[number];
+type ColorKey = "white" | "yellow" | "red" | "lime" | "blue" | "purple";
+type ThemeMode = "dark" | "light";
 
 const colorTokenMap: Record<ColorKey, string> = {
-  white: "--ascii-white",
-  yellow: "--ascii-yellow",
-  blue: "--ascii-blue",
-  lime: "--ascii-lime",
-  orange: "--ascii-orange",
+  white: "hsl(var(--ascii-white))",
+  yellow: "hsl(var(--ascii-yellow))",
+  red: "hsl(var(--ascii-red))",
+  lime: "hsl(var(--ascii-lime))",
+  blue: "hsl(var(--ascii-blue))",
+  purple: "hsl(var(--ascii-purple))",
 };
 
-export default function AsciiArtMaker() {
-  const [text, setText] = useState("HELLO WORLD");
-  const [cols, setCols] = useState(150);
-  const [ramp, setRamp] = useState<keyof typeof RAMPS>((RAMPS as any).symbols ? ("symbols" as keyof typeof RAMPS) : "detailed");
-  const [invert, setInvert] = useState(true);
-  const [aspect, setAspect] = useState(1.6);
-  const [randomMode, setRandomMode] = useState(false);
+const darkModeColors: ColorKey[] = ["white", "yellow", "blue", "red", "lime", "purple"];
+const lightModeColors: ColorKey[] = ["white", "red", "lime", "purple", "yellow", "blue"];
+
+const AsciiArtMaker = () => {
+  const [text, setText] = useState("ASCII");
+  const [asciiArt, setAsciiArt] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [mode, setMode] = useState<"text" | "image">("text");
+  const [theme, setTheme] = useState<ThemeMode>("dark");
+  
+  // Generation parameters
+  const [columns, setColumns] = useState(80);
+  const [aspectRatio, setAspectRatio] = useState(1.8);
+  const [ramp, setRamp] = useState<keyof typeof RAMPS>("detailed");
+  const [invert, setInvert] = useState(false);
   const [color, setColor] = useState<ColorKey>("white");
-  const [ascii, setAscii] = useState<string>("");
-  const [mode, setMode] = useState<"text" | "image">("image");
-  const [file, setFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [previewSize, setPreviewSize] = useState(2);
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [previewSize, setPreviewSize] = useState(0.8);
+  
+  // UI states
+  const [isLoading, setIsLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
-  const randomizeControls = () => {
+  const currentColors = theme === "dark" ? darkModeColors : lightModeColors;
+
+  const randomizeControls = useCallback(() => {
+    setColumns(Math.floor(Math.random() * 80) + 20);
+    setAspectRatio(Math.random() * 2 + 0.5);
     const keys = Object.keys(RAMPS) as Array<keyof typeof RAMPS>;
-    const k = keys[Math.floor(Math.random() * keys.length)];
-    setRamp(k);
-    const c = Math.floor(80 + Math.random() * 160);
-    setCols(c);
-  };
+    setRamp(keys[Math.floor(Math.random() * keys.length)]);
+    setInvert(Math.random() > 0.5);
+    const availableColors = currentColors;
+    setColor(availableColors[Math.floor(Math.random() * availableColors.length)]);
+  }, [currentColors]);
 
-  const measureCharAspect = () => {
-    try {
+  const measureCharAspect = useCallback(() => {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return 2;
+
+    const fontSize = 12 * previewSize;
+    ctx.font = `${fontSize}px monospace`;
+    const metrics = ctx.measureText("M");
+    return fontSize / (metrics.width || fontSize / 2);
+  }, [previewSize]);
+
+  const rasterImageToAscii = useCallback(
+    (imgEl: HTMLImageElement) => {
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
-      if (!ctx) return aspect;
-      const fontSize = previewSize; // px
-      const lineH = 0.8; // matches <pre> style
-      ctx.font = `${fontSize}px "Press Start 2P", "VT323", ui-monospace, Menlo, Consolas, monospace`;
-      const charW = ctx.measureText("M").width || fontSize * 0.6;
-      const charH = fontSize * lineH;
-      const ratio = charH / Math.max(1, charW);
-      return Math.max(0.6, Math.min(3, ratio));
-    } catch {
-      return aspect;
-    }
-  };
+      if (!ctx) return "";
 
-  const rasterImageToAscii = async (imgEl: HTMLImageElement) => {
-    const canvas = document.createElement("canvas");
-    canvas.width = imgEl.naturalWidth || imgEl.width;
-    canvas.height = imgEl.naturalHeight || imgEl.height;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return "";
-    ctx.drawImage(imgEl, 0, 0, canvas.width, canvas.height);
-    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const rampStr = RAMPS[ramp] || RAMPS.detailed;
-    const aspectEff = measureCharAspect();
-    
-    const aspectRatio = canvas.width / canvas.height;
-    const isSquareish = Math.abs(aspectRatio - 1) < 0.3; // Consider nearly square images
-    
-    let targetCols: number;
-    
-    if (isSquareish) {
-      // For square images, use smaller character count for better visibility
-      targetCols = Math.floor(Math.min(100, Math.max(40, cols * 0.8)));
-    } else {
-      // For non-square images, use moderate character count
-      if (aspectRatio > 1.5) {
-        // Wide images
-        targetCols = Math.floor(Math.min(120, Math.max(60, cols)));
-      } else if (aspectRatio < 0.7) {
-        // Tall images  
-        targetCols = Math.floor(Math.min(80, Math.max(40, cols * 0.7)));
+      canvas.width = imgEl.naturalWidth || imgEl.width;
+      canvas.height = imgEl.naturalHeight || imgEl.height;
+      ctx.drawImage(imgEl, 0, 0, canvas.width, canvas.height);
+      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const rampStr = RAMPS[ramp] || RAMPS.detailed;
+      const charAspect = measureCharAspect();
+
+      const aspectRatio = canvas.width / canvas.height;
+      const isSquareish = Math.abs(aspectRatio - 1) < 0.3;
+      
+      let targetCols: number;
+      
+      if (isSquareish) {
+        targetCols = Math.floor(Math.min(100, Math.max(40, columns * 0.8)));
       } else {
-        // Regular aspect ratio
-        targetCols = Math.floor(Math.min(100, Math.max(50, cols * 0.9)));
+        if (aspectRatio > 1.5) {
+          targetCols = Math.floor(Math.min(120, Math.max(60, columns)));
+        } else if (aspectRatio < 0.7) {
+          targetCols = Math.floor(Math.min(80, Math.max(40, columns * 0.7)));
+        } else {
+          targetCols = Math.floor(Math.min(100, Math.max(50, columns * 0.9)));
+        }
       }
-    }
-    
-    const dynCols = targetCols;
-    if (dynCols !== cols) setCols(dynCols);
-    return imageDataToASCII(imgData, canvas.width, canvas.height, dynCols, rampStr, invert, aspectEff, { gamma: 0.9, samples: 3 });
-  };
 
-  const onGenerate = async () => {
+      return imageDataToASCII(imgData, canvas.width, canvas.height, targetCols, rampStr, invert, charAspect, { gamma: 0.9, samples: 3 });
+    },
+    [ramp, invert, columns, measureCharAspect]
+  );
+
+  const onGenerate = useCallback(async () => {
+    setIsLoading(true);
     try {
-      setLoading(true);
-      if (randomMode) randomizeControls();
-
       if (mode === "text") {
-        const out = generateAsciiFromText({ text, cols, rampKey: ramp, invert, aspect });
-        setAscii(out);
-        if (!out) toast.error("Failed to generate ASCII");
-        return;
-      }
-
-      if (mode === "image") {
-        if (!file) {
-          toast.error("Choose an image");
-          return;
-        }
+        const result = generateAsciiFromText({ text, cols: columns, rampKey: ramp, invert, aspect: aspectRatio });
+        setAsciiArt(result);
+      } else if (imageFile) {
         const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.src = URL.createObjectURL(file);
-        await new Promise<void>((res, rej) => {
-          img.onload = () => res();
-          img.onerror = () => rej(new Error("Image load failed"));
-        });
-        const out = await rasterImageToAscii(img);
-        setAscii(out);
-        URL.revokeObjectURL(img.src);
+        img.onload = () => {
+          const result = rasterImageToAscii(img);
+          setAsciiArt(result);
+          setIsLoading(false);
+        };
+        img.src = URL.createObjectURL(imageFile);
         return;
       }
-
-    } catch (e) {
-      console.error(e);
-      toast.error("Generation failed");
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      console.error("Generation failed:", error);
+      toast({
+        title: "Generation failed",
+        description: "Please try again with different settings.",
+        variant: "destructive",
+      });
     }
-  };
+    setIsLoading(false);
+  }, [mode, text, imageFile, columns, aspectRatio, ramp, invert, rasterImageToAscii, toast]);
 
-  const onCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(ascii);
-      toast.success("ASCII copied to clipboard");
-    } catch (e) {
-      toast.error("Copy failed");
-    }
-  };
+  const onCopy = useCallback(() => {
+    navigator.clipboard.writeText(asciiArt);
+    toast({
+      title: "Copied!",
+      description: "ASCII art copied to clipboard.",
+    });
+  }, [asciiArt, toast]);
 
-  const onDownload = () => {
-    const blob = new Blob([ascii], { type: "text/plain" });
+  const onDownload = useCallback(() => {
+    const blob = new Blob([asciiArt], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "ascii.txt";
+    a.href = url;
+    a.download = "ascii-art.txt";
     a.click();
-    URL.revokeObjectURL(a.href);
-    toast.success("ascii.txt downloaded");
-  };
+    URL.revokeObjectURL(url);
+  }, [asciiArt]);
 
-  const textColor = `hsl(var(${colorTokenMap[color]}))`;
-
-  // Calculate optimal font size and container dimensions for current viewport and ASCII content
-  const calculateOptimalDisplay = () => {
-    if (!ascii) return { fontSize: previewSize, containerStyle: {} };
-    
-    const lines = ascii.split('\n').filter(line => line.trim());
-    const maxLineLength = Math.max(...lines.map(line => line.length));
-    const numLines = lines.length;
-    
-    // Calculate ASCII aspect ratio
-    const asciiAspectRatio = maxLineLength / numLines;
-    
-    if (isFullscreen) {
-      // For fullscreen, use viewport dimensions
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight - 100; // Leave space for header
-      
-      let containerWidth, containerHeight;
-      
-      // Determine container size based on ASCII aspect ratio
-      if (asciiAspectRatio > viewportWidth / viewportHeight) {
-        // ASCII is wider - fit to width
-        containerWidth = viewportWidth * 0.95;
-        containerHeight = containerWidth / asciiAspectRatio;
-      } else {
-        // ASCII is taller - fit to height
-        containerHeight = viewportHeight * 0.9;
-        containerWidth = containerHeight * asciiAspectRatio;
-      }
-      
-      // Calculate font size to fit exactly
-      const fontSizeByWidth = containerWidth / (maxLineLength * 0.6);
-      const fontSizeByHeight = containerHeight / (numLines * 0.8);
-      const fontSize = Math.min(fontSizeByWidth, fontSizeByHeight);
-      
-      return {
-        fontSize: Math.max(2, Math.min(fontSize, 32)),
-        containerStyle: {
-          width: `${containerWidth}px`,
-          height: `${containerHeight}px`,
-          maxWidth: 'none',
-          maxHeight: 'none'
-        }
-      };
-    } else {
-      // For regular preview
-      const maxContainerWidth = Math.min(window.innerWidth * 0.9, 1200);
-      const maxContainerHeight = Math.min(window.innerHeight * 0.6, 600);
-      
-      let containerWidth, containerHeight;
-      
-      // Determine container size based on ASCII aspect ratio
-      if (asciiAspectRatio > maxContainerWidth / maxContainerHeight) {
-        containerWidth = maxContainerWidth;
-        containerHeight = containerWidth / asciiAspectRatio;
-      } else {
-        containerHeight = maxContainerHeight;
-        containerWidth = containerHeight * asciiAspectRatio;
-      }
-      
-      const fontSizeByWidth = containerWidth / (maxLineLength * 0.6);
-      const fontSizeByHeight = containerHeight / (numLines * 0.8);
-      const fontSize = Math.min(fontSizeByWidth, fontSizeByHeight);
-      
-      return {
-        fontSize: Math.max(1, Math.min(fontSize, 16)),
-        containerStyle: {
-          width: `${containerWidth}px`,
-          height: `${containerHeight}px`,
-          minHeight: `${containerHeight}px`
-        }
-      };
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
     }
   };
 
-  const { fontSize: optimalFontSize, containerStyle } = calculateOptimalDisplay();
+  const calculateOptimalDisplay = useMemo(() => {
+    if (!asciiArt) return { fontSize: 12, width: "100%", height: "auto" };
+
+    const lines = asciiArt.split("\n");
+    const maxLineLength = Math.max(...lines.map(line => line.length));
+    const lineCount = lines.length;
+
+    const containerWidth = isFullscreen ? window.innerWidth - 40 : 600;
+    const containerHeight = isFullscreen ? window.innerHeight - 40 : 400;
+
+    const fontSizeByWidth = (containerWidth * 0.9) / (maxLineLength * 0.6);
+    const fontSizeByHeight = (containerHeight * 0.9) / (lineCount * 1.2);
+    
+    const fontSize = Math.max(6, Math.min(fontSizeByWidth, fontSizeByHeight)) * previewSize;
+
+    return {
+      fontSize: Math.round(fontSize),
+      width: "100%",
+      height: "auto",
+    };
+  }, [asciiArt, isFullscreen, previewSize]);
+
+  const themeBackgroundClass = theme === "dark" 
+    ? "bg-[hsl(var(--theme-dark-bg))]" 
+    : "bg-[hsl(var(--theme-light-bg))]";
+
+  const themeTextClass = theme === "dark" ? "text-white" : "text-white";
+  const surfaceClass = theme === "dark" 
+    ? "bg-[hsl(var(--theme-dark-surface))]" 
+    : "bg-[hsl(var(--theme-light-surface))]";
 
   return (
-    <section aria-labelledby="maker-title" className="space-y-4 mx-auto max-w-3xl">
-      <Card className="border-border/60 bg-card/70 backdrop-blur supports-[backdrop-filter]:bg-card/60 shadow-[var(--shadow-elegant,0_10px_30px_-10px_hsl(var(--primary)/0.2))]">
-        <CardHeader>
-          <CardTitle id="maker-title" className="text-base">AI ASCII Art Generator</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid md:grid-cols-12 gap-3">
-            <div className="md:col-span-6 space-y-2">
-              {mode === "text" && (
-                <>
-                  <Label htmlFor="prompt">Enter your prompt here…</Label>
-                  <div className="relative">
-                    <Input
-                      id="prompt"
-                      placeholder="Enter your prompt…"
-                      value={text}
-                      onChange={(e) => setText(e.target.value)}
-                      className="h-9 text-sm pr-24"
-                    />
-                    <Button
-                      size="sm"
-                      className="absolute right-1 top-1"
-                      onClick={onGenerate}
-                      disabled={loading}
-                    >
-                      {loading ? "Generating…" : "Generate"}
-                    </Button>
-                  </div>
-                </>
-              )}
-              {mode === "image" && (
-                <div className="space-y-2">
-                  <Label htmlFor="image">Image</Label>
-                  <div className="flex items-center gap-2">
-                    <Input id="image" type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-                    <Button size="sm" onClick={onGenerate} disabled={loading}>
-                      {loading ? "Generating…" : "Generate"}
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="md:col-span-6">
-              <Button size="sm" variant="ghost" onClick={() => setShowAdvanced((v) => !v)}>
-                {showAdvanced ? "Hide advanced" : "Advanced"}
-              </Button>
-            </div>
-            <div className={`md:col-span-2 space-y-2 ${showAdvanced ? "" : "hidden"}`}>
-              <Label>Columns</Label>
-              <div className="px-1">
-                <Slider value={[cols]} min={40} max={150} step={1} onValueChange={(v) => setCols(v[0] ?? cols)} />
-                <div className="text-xs text-muted-foreground mt-1">{cols} cols</div>
-                <div className="flex gap-2 mt-2">
-                  <Button size="sm" variant="secondary" onClick={() => setCols((c) => Math.max(40, c - 30))}>-30</Button>
-                  <Button size="sm" variant="secondary" onClick={() => setCols((c) => Math.min(150, c + 30))}>+30</Button>
-                </div>
+    <div className={`min-h-screen w-full flex ${themeBackgroundClass} ${themeTextClass}`}>
+      {/* Sidebar */}
+      <div className={`w-80 ${surfaceClass} border-r border-border/20 p-4 overflow-y-auto`}>
+        <div className="space-y-4">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-pixel text-white">ASCII Generator</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="p-2 text-white hover:text-white"
+            >
+              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </Button>
+          </div>
+
+          {/* Tabs */}
+          <Tabs value={mode} onValueChange={(value) => setMode(value as "text" | "image")}>
+            <TabsList className="grid w-full grid-cols-3 bg-background/10">
+              <TabsTrigger value="text">Text</TabsTrigger>
+              <TabsTrigger value="image">Image</TabsTrigger>
+              <TabsTrigger value="style">Style</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="text" className="space-y-4">
+              <div>
+                <Label htmlFor="text-input" className="text-sm font-medium text-white">Text to Convert</Label>
+                <Textarea
+                  id="text-input"
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder="Enter your text..."
+                  className="mt-1 bg-background/10 border-border/30 text-white"
+                />
               </div>
-            </div>
-            <div className={`md:col-span-2 space-y-2 ${showAdvanced ? "" : "hidden"}`}>
-              <Label>Aspect</Label>
-              <div className="px-1">
-                <Slider value={[aspect]} min={1.0} max={3.0} step={0.1} onValueChange={(v) => setAspect(Number(v[0] ?? aspect))} />
-                <div className="text-xs text-muted-foreground mt-1">{aspect.toFixed(1)} h/w</div>
+
+              <div>
+                <Label className="text-sm font-medium text-white">Columns: {columns}</Label>
+                <Slider
+                  value={[columns]}
+                  onValueChange={(value) => setColumns(value[0])}
+                  min={10}
+                  max={120}
+                  step={1}
+                  className="mt-2"
+                />
               </div>
-            </div>
-            <div className={`md:col-span-2 space-y-2 ${showAdvanced ? "" : "hidden"}`}>
-              <Label>Preview size</Label>
-              <div className="px-1">
-                <Slider value={[previewSize]} min={2} max={14} step={1} onValueChange={(v) => setPreviewSize(Number(v[0] ?? previewSize))} />
-                <div className="text-xs text-muted-foreground mt-1">{previewSize}px</div>
+
+              <div>
+                <Label className="text-sm font-medium text-white">Aspect Ratio: {aspectRatio.toFixed(1)}</Label>
+                <Slider
+                  value={[aspectRatio]}
+                  onValueChange={(value) => setAspectRatio(value[0])}
+                  min={0.5}
+                  max={3}
+                  step={0.1}
+                  className="mt-2"
+                />
               </div>
-            </div>
-            <div className={`md:col-span-6 space-y-2 ${showAdvanced ? "" : "hidden"}`}>
-              <Label>Character set</Label>
-              <div className="flex flex-wrap gap-1">
-                {Object.keys(RAMPS).map((k) => (
+            </TabsContent>
+
+            <TabsContent value="image" className="space-y-4">
+              <div>
+                <Label className="text-sm font-medium text-white">Upload Image</Label>
+                <div className="mt-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
                   <Button
-                    key={k}
-                    size="sm"
-                    variant={ramp === (k as keyof typeof RAMPS) ? "default" : "secondary"}
-                    aria-pressed={ramp === (k as keyof typeof RAMPS)}
-                    onClick={() => setRamp(k as keyof typeof RAMPS)}
+                    onClick={() => fileInputRef.current?.click()}
+                    variant="outline"
+                    className="w-full text-white border-white/20 hover:bg-white/10"
                   >
-                    {k}
+                    <Upload className="h-4 w-4 mr-2" />
+                    {imageFile ? imageFile.name : "Choose Image"}
                   </Button>
-                ))}
-              </div>
-            </div>
-            <div className={`md:col-span-2 space-y-2 ${showAdvanced ? "" : "hidden"}`}>
-              <Label>Mode</Label>
-              <Select value={mode} onValueChange={(v) => setMode(v as "text" | "image")}>
-                <SelectTrigger aria-label="Generation mode" className="h-9">
-                  <SelectValue placeholder="Choose mode" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="text">Text</SelectItem>
-                  <SelectItem value="image">Image</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className={`md:col-span-2 flex items-end gap-3 ${showAdvanced ? "" : "hidden"}`}>
-              <div className="space-y-2">
-                <Label htmlFor="invert">Invert</Label>
-                <div className="flex items-center gap-2">
-                  <Switch id="invert" checked={invert} onCheckedChange={setInvert} />
-                  <span className="text-sm text-muted-foreground">{invert ? "On" : "Off"}</span>
                 </div>
               </div>
-            </div>
-            <div className={`md:col-span-12 flex flex-wrap gap-2 items-end ${showAdvanced ? "" : "hidden"}`}>
-              <Button size="sm" variant="secondary" onClick={() => setRandomMode((s) => !s)}>
-                Random: {randomMode ? "ON" : "OFF"}
-              </Button>
-              <Button size="sm" variant="secondary" onClick={onCopy} disabled={!ascii}>
-                Copy as text
-              </Button>
-              <Button size="sm" variant="secondary" onClick={onDownload} disabled={!ascii}>
-                Save as TXT
-              </Button>
-              <div className="ml-auto flex items-center gap-2">
-                <Label className="text-sm text-muted-foreground">Foreground</Label>
-                <div className="flex gap-1">
-                  {colorKeys.map((ck) => (
+
+              {imageFile && (
+                <div className="rounded-lg overflow-hidden border border-border/30">
+                  <img
+                    src={URL.createObjectURL(imageFile)}
+                    alt="Preview"
+                    className="w-full h-32 object-cover"
+                  />
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="style" className="space-y-4">
+              <div>
+                <Label className="text-sm font-medium text-white">Character Set</Label>
+                <Select value={ramp} onValueChange={(value) => setRamp(value as keyof typeof RAMPS)}>
+                  <SelectTrigger className="mt-1 bg-background/10 border-border/30 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.keys(RAMPS).map((key) => (
+                      <SelectItem key={key} value={key}>
+                        {key}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium text-white">Text Color</Label>
+                <div className="grid grid-cols-3 gap-2 mt-2">
+                  {currentColors.map((colorKey) => (
                     <button
-                      key={ck}
-                      title={ck}
-                      onClick={() => setColor(ck)}
-                      className={`h-6 w-6 rounded-md border border-border aria-selected:ring-2 aria-selected:ring-ring`}
-                      aria-selected={color === ck}
-                      style={{ background: `hsl(var(${colorTokenMap[ck]}))` }}
+                      key={colorKey}
+                      onClick={() => setColor(colorKey)}
+                      className={`h-8 rounded border-2 transition-all ${
+                        color === colorKey ? "border-white" : "border-border/30"
+                      }`}
+                      style={{ backgroundColor: colorTokenMap[colorKey] }}
                     />
                   ))}
                 </div>
               </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      <Card className="border-dashed">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Preview</CardTitle>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setIsFullscreen(!isFullscreen)}
-            >
-              {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="p-3 md:p-4">
-          <div
-            className={`rounded-md border overflow-hidden mx-auto ${
-              isFullscreen 
-                ? "fixed inset-0 z-50 bg-background rounded-none border-0 flex flex-col" 
-                : "flex items-center justify-center"
-            }`}
-            style={{
-              backgroundImage: !isFullscreen ? 
-                `linear-gradient(to right, hsl(var(--border) / 0.2) 1px, transparent 1px),` +
-                `linear-gradient(to bottom, hsl(var(--border) / 0.2) 1px, transparent 1px)` : 'none',
-              backgroundSize: "12px 12px",
-              ...(!isFullscreen && { minHeight: '60vh' })
-            }}
-          >
-            {isFullscreen && (
-              <div className="flex justify-between items-center p-4 border-b bg-background">
-                <h3 className="text-lg font-semibold">ASCII Art Preview</h3>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setIsFullscreen(false)}
-                >
-                  Close
-                </Button>
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium text-white">Invert</Label>
+                <Switch checked={invert} onCheckedChange={setInvert} />
               </div>
-            )}
-            <div
-              className={`${isFullscreen ? "flex-1 flex items-center justify-center p-8" : "flex items-center justify-center p-4"}`}
-              style={containerStyle}
+
+              <div>
+                <Label className="text-sm font-medium text-white">Preview Size: {Math.round(previewSize * 100)}%</Label>
+                <Slider
+                  value={[previewSize]}
+                  onValueChange={(value) => setPreviewSize(value[0])}
+                  min={0.3}
+                  max={2}
+                  step={0.1}
+                  className="mt-2"
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          {/* Action Buttons */}
+          <div className="space-y-2">
+            <Button 
+              onClick={onGenerate} 
+              disabled={isLoading}
+              className="w-full bg-brand hover:bg-brand/90 text-white"
             >
-              <pre
-                className="font-ascii whitespace-pre overflow-hidden"
-                style={{ 
-                  color: textColor, 
-                  fontSize: `${optimalFontSize}px`, 
-                  lineHeight: 0.8,
-                  textAlign: 'center',
-                  margin: 0,
-                  padding: 0
-                }}
-                aria-label="ASCII preview"
-              >
-                {ascii || "Generate ASCII art to see preview"}
-              </pre>
+              {isLoading ? "Generating..." : "Generate ASCII"}
+            </Button>
+
+            <div className="grid grid-cols-3 gap-2">
+              <Button variant="outline" size="sm" onClick={randomizeControls} className="text-white border-white/20 hover:bg-white/10">
+                <Shuffle className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="sm" onClick={onCopy} disabled={!asciiArt} className="text-white border-white/20 hover:bg-white/10">
+                <Copy className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="sm" onClick={onDownload} disabled={!asciiArt} className="text-white border-white/20 hover:bg-white/10">
+                <Download className="h-4 w-4" />
+              </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
-    </section>
+        </div>
+      </div>
+
+      {/* Main Preview Area */}
+      <div className="flex-1 flex flex-col">
+        {/* Top Bar */}
+        <div className="h-12 bg-background/5 border-b border-border/20 flex items-center justify-between px-4">
+          <span className="text-sm font-medium text-white">ASCII Preview</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            className="p-2 text-white hover:text-white"
+          >
+            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </Button>
+        </div>
+
+        {/* Preview Container */}
+        <div className="flex-1 p-4">
+          <Card className={`h-full bg-background/5 border-border/20 ${isFullscreen ? 'fixed inset-4 z-50' : ''}`}>
+            <div className="h-full flex items-center justify-center p-4">
+              {asciiArt ? (
+                <pre
+                  className="font-mono whitespace-pre leading-none overflow-auto max-w-full max-h-full"
+                  style={{
+                    color: colorTokenMap[color],
+                    fontSize: `${calculateOptimalDisplay.fontSize}px`,
+                    lineHeight: "1.1",
+                  }}
+                >
+                  {asciiArt}
+                </pre>
+              ) : (
+                <div className="text-center text-muted-foreground">
+                  <Palette className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg font-medium text-white">No ASCII art generated yet</p>
+                  <p className="text-sm text-white/70">Use the sidebar to create your ASCII art</p>
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
   );
-}
+};
+
+export default AsciiArtMaker;
