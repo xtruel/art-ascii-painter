@@ -74,27 +74,29 @@ export default function AsciiArtMaker() {
     const rampStr = RAMPS[ramp] || RAMPS.detailed;
     const aspectEff = measureCharAspect();
     
-    // Target closer to 7000 characters for bigger output
-    const maxChars = 6500; // Use most of the budget
     const aspectRatio = canvas.width / canvas.height;
+    const isSquareish = Math.abs(aspectRatio - 1) < 0.3; // Consider nearly square images
     
-    // Calculate dimensions to maximize character usage
-    let targetCols = Math.sqrt(maxChars * aspectRatio);
-    let targetRows = targetCols / aspectRatio;
+    let targetCols: number;
     
-    // Round and ensure we use character budget efficiently
-    targetCols = Math.floor(Math.min(150, targetCols));
-    targetRows = Math.floor(targetRows);
-    
-    // If we're under budget, increase size proportionally
-    const actualChars = targetCols * targetRows;
-    if (actualChars < maxChars * 0.8) {
-      const scale = Math.sqrt(maxChars * 0.9 / actualChars);
-      targetCols = Math.floor(Math.min(150, targetCols * scale));
-      targetRows = Math.floor(targetRows * scale);
+    if (isSquareish) {
+      // For square images, use smaller character count for better visibility
+      targetCols = Math.floor(Math.min(100, Math.max(40, cols * 0.8)));
+    } else {
+      // For non-square images, use moderate character count
+      if (aspectRatio > 1.5) {
+        // Wide images
+        targetCols = Math.floor(Math.min(120, Math.max(60, cols)));
+      } else if (aspectRatio < 0.7) {
+        // Tall images  
+        targetCols = Math.floor(Math.min(80, Math.max(40, cols * 0.7)));
+      } else {
+        // Regular aspect ratio
+        targetCols = Math.floor(Math.min(100, Math.max(50, cols * 0.9)));
+      }
     }
     
-    const dynCols = Math.max(80, targetCols); // Higher minimum for bigger output
+    const dynCols = targetCols;
     if (dynCols !== cols) setCols(dynCols);
     return imageDataToASCII(imgData, canvas.width, canvas.height, dynCols, rampStr, invert, aspectEff, { gamma: 0.9, samples: 3 });
   };
