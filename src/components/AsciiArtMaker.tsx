@@ -71,6 +71,60 @@ const AsciiArtMaker = () => {
     setColor(availableColors[Math.floor(Math.random() * availableColors.length)]);
   }, [currentColors]);
 
+  const applyStyle = useCallback((styleType: string) => {
+    const availableColors = currentColors;
+    
+    switch(styleType) {
+      case "RETRO":
+        setColumns(60 + Math.floor(Math.random() * 20));
+        setAspectRatio(1.5 + Math.random() * 0.5);
+        setRamp("blocks");
+        setInvert(false);
+        setColor(theme === "dark" ? "lime" : "red");
+        setPreviewSize(1.2);
+        break;
+        
+      case "MINIMAL":
+        setColumns(40 + Math.floor(Math.random() * 15));
+        setAspectRatio(2.0 + Math.random() * 0.3);
+        setRamp("smooth");
+        setInvert(Math.random() > 0.7);
+        setColor(theme === "dark" ? "white" : "white");
+        setPreviewSize(1.0);
+        break;
+        
+      case "DENSE":
+        setColumns(90 + Math.floor(Math.random() * 30));
+        setAspectRatio(1.0 + Math.random() * 0.8);
+        setRamp("detailed");
+        setInvert(Math.random() > 0.6);
+        setColor(availableColors[Math.floor(Math.random() * availableColors.length)]);
+        setPreviewSize(0.8);
+        break;
+        
+      case "NEON":
+        setColumns(70 + Math.floor(Math.random() * 20));
+        setAspectRatio(1.8 + Math.random() * 0.4);
+        setRamp("symbols");
+        setInvert(true);
+        setColor(theme === "dark" ? "purple" : "purple");
+        setPreviewSize(1.1);
+        break;
+        
+      case "CYBER":
+        setColumns(55 + Math.floor(Math.random() * 25));
+        setAspectRatio(1.6 + Math.random() * 0.6);
+        setRamp("binary");
+        setInvert(Math.random() > 0.5);
+        setColor(theme === "dark" ? "blue" : "blue");
+        setPreviewSize(1.3);
+        break;
+        
+      default:
+        randomizeControls();
+    }
+  }, [currentColors, theme, randomizeControls]);
+
   const measureCharAspect = useCallback(() => {
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
@@ -357,6 +411,24 @@ const AsciiArtMaker = () => {
             >
               {isLoading ? "Generating..." : "Generate ASCII"}
             </Button>
+
+            {/* Style Presets */}
+            <div className="space-y-2">
+              <Label className="text-xs text-white/80 font-semibold">STYLE PRESETS</Label>
+              <div className="grid grid-cols-1 gap-1">
+                {["RETRO", "MINIMAL", "DENSE", "NEON", "CYBER"].map((style) => (
+                  <Button 
+                    key={style}
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => applyStyle(style)}
+                    className="text-white border-white/20 hover:bg-white/10 text-xs font-mono"
+                  >
+                    {style}
+                  </Button>
+                ))}
+              </div>
+            </div>
 
             <div className="grid grid-cols-3 gap-2">
               <Button variant="outline" size="sm" onClick={randomizeControls} className="text-white border-white/20 hover:bg-white/10">
