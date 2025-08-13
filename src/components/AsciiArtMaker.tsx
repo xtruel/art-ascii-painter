@@ -72,9 +72,27 @@ export default function AsciiArtMaker() {
     const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const rampStr = RAMPS[ramp] || RAMPS.detailed;
     const aspectEff = measureCharAspect();
-    const targetRows = 90;
-    const suggested = Math.round((targetRows * canvas.width * aspectEff) / canvas.height);
-    const dynCols = Math.max(40, Math.min(150, suggested));
+    
+    // Target max 7000 characters for good quantization
+    const maxChars = 7000;
+    const aspectRatio = canvas.width / canvas.height;
+    
+    // Calculate optimal dimensions within character limit
+    let targetRows = Math.sqrt(maxChars / aspectRatio);
+    let targetCols = targetRows * aspectRatio;
+    
+    // Ensure we stay within bounds and character limit
+    targetRows = Math.floor(Math.min(100, targetRows));
+    targetCols = Math.floor(Math.min(150, targetCols));
+    
+    // Verify total chars don't exceed limit
+    if (targetRows * targetCols > maxChars) {
+      const scale = Math.sqrt(maxChars / (targetRows * targetCols));
+      targetRows = Math.floor(targetRows * scale);
+      targetCols = Math.floor(targetCols * scale);
+    }
+    
+    const dynCols = Math.max(40, targetCols);
     if (dynCols !== cols) setCols(dynCols);
     return imageDataToASCII(imgData, canvas.width, canvas.height, dynCols, rampStr, invert, aspectEff, { gamma: 0.9, samples: 3 });
   };
