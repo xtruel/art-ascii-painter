@@ -302,7 +302,7 @@ export default function AsciiArtMaker() {
         </CardHeader>
         <CardContent className="p-3 md:p-4">
           <div
-            className="rounded-md border overflow-hidden w-[510px] h-[510px] mx-auto"
+            className="rounded-md border overflow-hidden w-full max-w-4xl mx-auto aspect-square"
             style={{
               backgroundImage:
                 `linear-gradient(to right, hsl(var(--border) / 0.2) 1px, transparent 1px),` +
@@ -311,11 +311,20 @@ export default function AsciiArtMaker() {
             }}
           >
             <pre
-              className="font-ascii max-h-[45vh] whitespace-pre px-[7.5%] pt-[7.5%] pb-[15%]"
-              style={{ color: textColor, fontSize: `${previewSize}px`, lineHeight: 0.8 }}
+              className="font-ascii h-full w-full whitespace-pre overflow-auto p-4 flex items-center justify-center"
+              style={{ 
+                color: textColor, 
+                fontSize: `${previewSize}px`, 
+                lineHeight: 0.8,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
               aria-label="ASCII preview"
             >
-              {ascii || ""}
+              <div style={{ textAlign: 'center' }}>
+                {ascii || ""}
+              </div>
             </pre>
           </div>
         </CardContent>
